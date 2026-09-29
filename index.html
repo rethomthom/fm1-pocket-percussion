@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#080a0f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>FM1 Percussion</title>
+  <style>
+    :root { color-scheme: dark; --bg:#080a0f; --panel:#111722; --panel2:#171f2d; --line:#293448; --text:#f3f6fb; --muted:#94a0b5; --accent:#7ce7c5; --accent2:#bb9cff; }
+    * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    html { background:var(--bg); }
+    body { margin:0; min-width:320px; background:radial-gradient(circle at 50% -10%,#1a2540 0,#080a0f 48%); color:var(--text); font:15px/1.25 -apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif; padding:env(safe-area-inset-top) 14px env(safe-area-inset-bottom); }
+    main { max-width:760px; margin:0 auto; padding:14px 0 26px; }
+    header { display:flex; align-items:end; justify-content:space-between; gap:12px; margin-bottom:14px; }
+    h1 { margin:0; font-size:24px; letter-spacing:.12em; font-weight:800; }
+    .subtitle { color:var(--muted); font-size:12px; margin-top:4px; }
+    .badge { color:var(--accent); border:1px solid #2e6c61; border-radius:999px; padding:6px 9px; font-size:11px; white-space:nowrap; }
+    .pads { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
+    .pad { min-height:82px; padding:11px 6px 8px; border:1px solid var(--line); border-radius:14px; color:var(--text); background:linear-gradient(145deg,#1b2433,#121824); box-shadow:0 4px 0 #07090d, inset 0 1px #344159; font:700 12px/1.1 -apple-system,BlinkMacSystemFont,sans-serif; touch-action:manipulation; user-select:none; }
+    .pad:active, .pad.selected { transform:translateY(2px); box-shadow:0 2px 0 #07090d, inset 0 1px #6f82a7; background:linear-gradient(145deg,#293753,#172238); }
+    .pad.selected { border-color:var(--accent2); }
+    .pad-note { color:var(--muted); display:block; font-size:10px; font-weight:500; margin-top:7px; }
+    .editor { margin-top:14px; padding:15px 14px 13px; border:1px solid var(--line); border-radius:17px; background:rgba(17,23,34,.88); box-shadow:0 14px 35px #0005; }
+    .editor-head { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px; }
+    .editor-head strong { font-size:16px; letter-spacing:.04em; }
+    .hint { color:var(--muted); font-size:11px; text-align:right; }
+    .controls { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:18px; }
+    .control { display:grid; grid-template-columns:84px 1fr 49px; gap:7px; align-items:center; min-height:38px; border-top:1px solid #202a3a; }
+    .control label { color:#cbd4e4; font-size:12px; }
+    output { color:var(--accent); text-align:right; font-size:11px; font-variant-numeric:tabular-nums; }
+    input[type=range] { width:100%; height:28px; accent-color:var(--accent); }
+    .actions { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:14px; }
+    button.action { min-height:42px; padding:8px 5px; border:1px solid var(--line); border-radius:11px; color:var(--text); background:var(--panel2); font:700 11px -apple-system,BlinkMacSystemFont,sans-serif; }
+    button.action:active { background:#293752; }
+    button.primary { border-color:#367b6b; color:var(--accent); }
+    #status { min-height:18px; color:var(--muted); font-size:11px; margin-top:11px; }
+    @media (max-width:560px) { .controls { grid-template-columns:1fr; } .actions { grid-template-columns:repeat(2,1fr); } }
+    @media (min-width:620px) { .pad { min-height:94px; font-size:14px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div><h1>FM1 PERCUSSION</h1><div class="subtitle">12 voices · touch playable · Web Audio synthesis</div></div>
+      <div class="badge" id="audioState">AUDIO OFF</div>
+    </header>
+    <section class="pads" id="pads" aria-label="Percussion pads"></section>
+    <section class="editor" aria-label="Selected voice editor">
+      <div class="editor-head"><strong id="selectedName">LOW TOM</strong><span class="hint">Tap to play + edit</span></div>
+      <div class="controls" id="controls"></div>
+      <div class="actions">
+        <button class="action primary" id="savePatch">Save Patch</button>
+        <button class="action" id="resetPatch">Reset Patch</button>
+        <button class="action primary" id="saveKit">Save Kit</button>
+        <button class="action" id="resetKit">Reset Kit</button>
+      </div>
+      <div id="status" role="status">Tap any pad to start audio.</div>
+    </section>
+  </main>
+  <script>
+    const FACTORY = [
+      {name:'Low Tom',pitch:68,sweep:2.30,sweepDecay:42,ampDecay:.62,ratio:1,fm:.03,noise:.01,filter:2400,resonance:.10,drive:.10,level:.82},
+      {name:'Deep Tom',pitch:52,sweep:1.75,sweepDecay:65,ampDecay:.85,ratio:1.01,fm:.08,noise:.02,filter:1800,resonance:.16,drive:.14,level:.84},
+      {name:'Mid Tom',pitch:105,sweep:2.05,sweepDecay:34,ampDecay:.48,ratio:1,fm:.04,noise:.01,filter:3200,resonance:.08,drive:.08,level:.80},
+      {name:'High Tom',pitch:165,sweep:1.85,sweepDecay:27,ampDecay:.33,ratio:1.02,fm:.06,noise:.01,filter:4300,resonance:.08,drive:.08,level:.78},
+      {name:'Conga',pitch:190,sweep:1.55,sweepDecay:18,ampDecay:.27,ratio:1.49,fm:.18,noise:.015,filter:3600,resonance:.22,drive:.16,level:.80},
+      {name:'Block',pitch:520,sweep:1.08,sweepDecay:9,ampDecay:.105,ratio:2.73,fm:.24,noise:0,filter:5100,resonance:.35,drive:.20,level:.75},
+      {name:'Clave',pitch:1080,sweep:1.02,sweepDecay:5,ampDecay:.072,ratio:1.47,fm:.16,noise:0,filter:7200,resonance:.40,drive:.15,level:.74},
+      {name:'Noise Hit',pitch:150,sweep:1.1,sweepDecay:15,ampDecay:.24,ratio:1,fm:.02,noise:.90,filter:1700,resonance:.55,drive:.28,level:.72},
+      {name:'Zap',pitch:115,sweep:8.5,sweepDecay:75,ampDecay:.26,ratio:1,fm:.08,noise:.02,filter:6500,resonance:.10,drive:.25,level:.78},
+      {name:'Metal Perc',pitch:310,sweep:1.1,sweepDecay:14,ampDecay:.36,ratio:2.71,fm:.72,noise:.03,filter:6100,resonance:.42,drive:.32,level:.76},
+      {name:'FM Bell',pitch:440,sweep:1.04,sweepDecay:10,ampDecay:.78,ratio:2.37,fm:1.05,noise:0,filter:7800,resonance:.18,drive:.18,level:.76},
+      {name:'Weird Perc',pitch:230,sweep:3.2,sweepDecay:48,ampDecay:.43,ratio:3.61,fm:.88,noise:.16,filter:2900,resonance:.62,drive:.40,level:.72}
+    ];
+    const NOTE_NAMES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+    const SPECS=[['Pitch','pitch',35,1400,1,' Hz'],['Pitch Sweep','sweep',1,10,.01,'×'],['Sweep Decay','sweepDecay',2,180,1,' ms'],['Amp Decay','ampDecay',.03,1.5,.01,' s'],['FM Ratio','ratio',.25,6,.01,'×'],['FM Amount','fm',0,2,.01,'×'],['Noise','noise',0,1,.01,''],['Filter','filter',300,10000,10,' Hz'],['Resonance','resonance',0,.9,.01,''],['Drive','drive',0,1,.01,''],['Level','level',0,1,.01,'']];
+    const clone = value => JSON.parse(JSON.stringify(value));
+    let kit = load('fm1Kit') || clone(FACTORY), selected = 0, audio;
+    const $ = id => document.getElementById(id);
+    function load(key) { try { const value=JSON.parse(localStorage.getItem(key)); return Array.isArray(value) ? value : null; } catch (_) { return null; } }
+    function save(key,value) { try { localStorage.setItem(key,JSON.stringify(value)); return true; } catch (_) { return false; } }
+    function setStatus(message) { $('status').textContent=message; }
+    function ensureAudio() { if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === 'suspended') audio.resume(); $('audioState').textContent='AUDIO READY'; }
+    function makeCurve(amount) { const curve=new Float32Array(256), k=amount*28+1; for (let i=0;i<curve.length;i++) { const x=i*2/255-1; curve[i]=Math.tanh(x*k)/Math.tanh(k); } return curve; }
+    function playVoice(index, pressure=1) {
+      ensureAudio(); selected=index; renderEditor();
+      const p=kit[index], now=audio.currentTime, velocity=Math.max(.25,Math.min(1,pressure || 1));
+      const carrier=audio.createOscillator(), mod=audio.createOscillator(), modGain=audio.createGain(), filter=audio.createBiquadFilter(), shaper=audio.createWaveShaper(), gain=audio.createGain();
+      carrier.type='sine'; mod.type='sine'; filter.type='lowpass'; filter.frequency.setValueAtTime(Math.min(18000,p.filter),now); filter.Q.setValueAtTime(p.resonance*18,now); shaper.curve=makeCurve(p.drive); shaper.oversample='2x';
+      const end=now+Math.max(.08,p.ampDecay*4.2), pitchEnd=now+Math.max(.012,p.sweepDecay/1000);
+      carrier.frequency.setValueAtTime(Math.max(20,p.pitch*p.sweep),now); carrier.frequency.exponentialRampToValueAtTime(Math.max(20,p.pitch),pitchEnd);
+      mod.frequency.setValueAtTime(Math.max(1,p.pitch*p.ratio),now); modGain.gain.setValueAtTime(p.pitch*p.fm*260*velocity,now); modGain.gain.exponentialRampToValueAtTime(.001,now+Math.max(.02,p.ampDecay));
+      gain.gain.setValueAtTime(.001,now); gain.gain.exponentialRampToValueAtTime(Math.max(.001,p.level*.24*velocity),now+.004); gain.gain.exponentialRampToValueAtTime(.001,end);
+      mod.connect(modGain).connect(carrier.frequency); carrier.connect(filter).connect(shaper).connect(gain).connect(audio.destination); carrier.start(now); mod.start(now); carrier.stop(end+.03); mod.stop(end+.03);
+      if (p.noise>0) { const buffer=audio.createBuffer(1,Math.ceil(audio.sampleRate*Math.min(1.5,p.ampDecay*2.5)),audio.sampleRate), data=buffer.getChannelData(0); for(let i=0;i<data.length;i++) data[i]=(Math.random()*2-1)*p.noise; const source=audio.createBufferSource(), noiseGain=audio.createGain(); source.buffer=buffer; noiseGain.gain.setValueAtTime(p.level*.20*velocity,now); noiseGain.gain.exponentialRampToValueAtTime(.001,Math.min(end,now+p.ampDecay*1.6)); source.connect(noiseGain).connect(filter); source.start(now); source.stop(end+.03); }
+    }
+    function renderPads() { $('pads').innerHTML=''; kit.forEach((p,i)=>{ const button=document.createElement('button'); button.className='pad'+(i===selected?' selected':''); button.type='button'; button.setAttribute('aria-label','Play '+p.name); button.innerHTML=p.name+'<span class="pad-note">'+NOTE_NAMES[i]+'</span>'; button.addEventListener('pointerdown',event=>{ event.preventDefault(); playVoice(i,event.pressure && event.pressure>0 ? event.pressure : 1); }); $('pads').appendChild(button); }); }
+    function format(value,suffix) { if (suffix===' Hz') return Math.round(value)+suffix; if (suffix===' ms') return Math.round(value)+suffix; if (suffix===' s') return Number(value).toFixed(2)+suffix; if (suffix==='×') return Number(value).toFixed(2)+suffix; return Number(value).toFixed(2); }
+    function renderEditor() { const patch=kit[selected]; $('selectedName').textContent=patch.name.toUpperCase(); renderPads(); $('controls').innerHTML=''; SPECS.forEach(([label,key,min,max,step,suffix])=>{ const row=document.createElement('div'); row.className='control'; row.innerHTML='<label for="control-'+key+'">'+label+'</label><input id="control-'+key+'" type="range" min="'+min+'" max="'+max+'" step="'+step+'" value="'+patch[key]+'"><output for="control-'+key+'">'+format(patch[key],suffix)+'</output>'; const input=row.querySelector('input'), output=row.querySelector('output'); input.addEventListener('input',()=>{ patch[key]=Number(input.value); output.value=format(patch[key],suffix); }); $('controls').appendChild(row); }); }
+    function resetPatch() { kit[selected]=clone(FACTORY[selected]); renderEditor(); setStatus(kit[selected].name+' reset to factory settings.'); }
+    function resetKit() { kit=clone(FACTORY); try { localStorage.removeItem('fm1Kit'); localStorage.removeItem('fm1Patch'); } catch (_) {} renderEditor(); setStatus('Factory kit restored.'); }
+    $('savePatch').addEventListener('click',()=>{ const ok=save('fm1Patch',kit[selected]); if(ok) { save('fm1Kit',kit); setStatus(kit[selected].name+' patch saved on this device.'); } else setStatus('Storage is unavailable in this browser preview.'); });
+    $('saveKit').addEventListener('click',()=>{ const ok=save('fm1Kit',kit); if(ok) setStatus('Full kit saved on this device.'); else setStatus('Storage is unavailable in this browser preview.'); });
+    $('resetPatch').addEventListener('click',resetPatch); $('resetKit').addEventListener('click',resetKit); renderEditor();
+  </script>
+</body>
+</html>
